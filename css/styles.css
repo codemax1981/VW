@@ -1,0 +1,221 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #87CEEB;
+    font-family: 'Courier New', monospace;
+}
+
+#gameContainer {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* --- UI Elements --- */
+
+#ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    z-index: 1000;
+    width: 140px;
+}
+
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+#crosshair::before,
+#crosshair::after {
+    content: '';
+    position: absolute;
+    background: white;
+}
+
+#crosshair::before {
+    width: 20px;
+    height: 2px;
+    top: 9px;
+}
+
+#crosshair::after {
+    width: 2px;
+    height: 20px;
+    left: 9px;
+}
+
+#blockSelector {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 1000;
+}
+
+.block-item {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #fff;
+    cursor: pointer;
+    position: relative;
+}
+
+.block-item.selected {
+    border-color: #ffff00;
+    box-shadow: 0 0 10px #ffff00;
+}
+
+/* --- Main Menu --- */
+#mainMenu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 40px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 2000;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    animation: fade-in 1s ease-out;
+}
+
+.menu-title {
+    font-size: 4em;
+    margin: 0;
+    text-shadow: 4px 4px 0px rgba(0,0,0,0.7);
+}
+
+.menu-subtitle {
+    font-size: 1.2em;
+    margin: 10px 0 30px;
+    color: #ccc;
+}
+
+.menu-controls {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 30px;
+}
+
+.menu-controls h2 {
+    margin-top: 0;
+}
+
+#startGameBtn {
+    background: #7CB342;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.5em;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 5px 0 #4CAF50;
+}
+
+#startGameBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 0 #4CAF50;
+}
+
+#startGameBtn:active {
+    transform: translateY(2px);
+    box-shadow: 0 3px 0 #4CAF50;
+}
+
+
+/* --- Loading Screen --- */
+#loadingScreen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    font-size: 1.5em;
+}
+
+#loadingCube {
+    width: 50px;
+    height: 50px;
+    background: #8D6E63;
+    margin-bottom: 20px;
+    animation: rotate-cube 2s infinite linear;
+    border: 2px solid #5D4037;
+}
+
+@keyframes rotate-cube {
+    0% { transform: rotate3d(1, 1, 0, 0deg); }
+    100% { transform: rotate3d(1, 1, 0, 360deg); }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; transform: translate(-50%, -60%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* --- Pause Menu --- */
+#pauseMenu {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1500;
+    cursor: pointer;
+    text-align: center;
+}
+
+.pause-content h1 {
+    font-size: 3em;
+    margin-bottom: 10px;
+    text-shadow: 3px 3px 0px rgba(0,0,0,0.5);
+}
+
+.pause-content p {
+    font-size: 1.2em;
+}
+
+
+/* --- Utility Classes --- */
+.hidden {
+    display: none !important;
+}
+
+#frameTimeGraph {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #555;
+    margin-top: 10px;
+}
