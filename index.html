@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voxel World Game</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Game UI (hidden by default) -->
+        <div id="ui" class="hidden">
+            <div>FPS: <span id="fps">60</span></div>
+            <div>Position: <span id="position">0, 0, 0</span></div>
+            <div>Chunk: <span id="chunk">0, 0</span></div>
+            <div>Time: <span id="timeOfDay">12:00</span></div>
+            <div>Quality: <span id="graphicsQuality">High</span></div>
+            <div>Rendered Chunks: <span id="renderedChunks">0</span></div>
+            <div>Total Blocks: <span id="totalBlocks">0</span></div>
+            <div>Memory Usage: <span id="memoryUsage">0MB</span></div>
+            <canvas id="frameTimeGraph" width="120" height="40"></canvas>
+        </div>
+        
+        <div id="crosshair" class="hidden"></div>
+        
+        <div id="blockSelector" class="hidden">
+            <div class="block-item selected" data-block="stone" style="background: #9E9E9E;"></div>
+            <div class="block-item" data-block="cobblestone" style="background: #757575;"></div>
+            <div class="block-item" data-block="dirt" style="background: #8D6E63;"></div>
+            <div class="block-item" data-block="grass" style="background: #7CB342;"></div>
+            <div class="block-item" data-block="logs" style="background: #5D4037;"></div>
+            <div class="block-item" data-block="leaves" style="background: #4CAF50; opacity: 0.8;"></div>
+            <div class="block-item" data-block="planks" style="background: #A1887F;"></div>
+            <div class="block-item" data-block="glass" style="background: #E0F7FA; opacity: 0.6;"></div>
+            <div class="block-item" data-block="bricks" style="background: #C62828;"></div>
+        </div>
+        
+        <!-- Main Menu -->
+        <div id="mainMenu">
+            <h1 class="menu-title">Voxel World</h1>
+            <p class="menu-subtitle">An Infinite Block Universe</p>
+            <div class="menu-controls">
+                <h2>Controls</h2>
+                <p>WASD: Move | Mouse: Look | Space: Jump</p>
+                <p>Left Click: Break | Right Click: Place</p>
+                <p>1-9: Select Block | F: Toggle Flight</p>
+            </div>
+            <button id="startGameBtn">Start Game</button>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="hidden">
+            <div id="loadingCube"></div>
+            <p>Generating World...</p>
+        </div>
+
+        <!-- Pause Menu -->
+        <div id="pauseMenu" class="hidden">
+            <div class="pause-content">
+                <h1>Game Paused</h1>
+                <p>Click to Resume</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
