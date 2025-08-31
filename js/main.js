@@ -13,12 +13,14 @@ let stats = {
     quality: 'high'
 };
 
+
+
 // Initialize the core components and start the render loop
 function init() {
     initRenderer();
     initInput();
     setupQualityControls();
-    setupPauseControls(); // Added setup for pause/resume
+    setupPauseControls();
     animate();
 }
 
@@ -47,12 +49,23 @@ function animate(currentTime) {
     }
 }
 
-// New function to handle resuming the game on click
+// Enhanced pause controls with ESC key support
 function setupPauseControls() {
     document.body.addEventListener('click', () => {
         // If the game is running but pointer is not locked, re-request lock
         if (gameIsRunning && !mouseLocked) {
             document.body.requestPointerLock();
+        }
+    });
+    
+    // ESC key to pause/unpause
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && gameIsRunning) {
+            if (mouseLocked) {
+                document.exitPointerLock();
+            } else {
+                document.body.requestPointerLock();
+            }
         }
     });
 }
@@ -90,7 +103,7 @@ function setupQualityControls() {
         
         if (qualityChanged) {
             stats.quality = newQuality.toLowerCase();
-            showNotification(`Graphics Quality: ${newQuality}`);
+            showNotification(`Graphics Quality: ${newQuality}`, 'success');
         }
     });
 }
@@ -170,86 +183,108 @@ function getTimeOfDay() {
     return '12:00';
 }
 
-// Show temporary notification
-function showNotification(message) {
+// Enhanced notification system with types
+function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 15px 30px;
-        border-radius: 5px;
-        font-family: monospace;
-        font-size: 16px;
-        z-index: 10000;
-        pointer-events: none;
-    `;
+    notification.className = 'notification';
+    
+    // Add type-specific styling
+    let backgroundColor;
+    switch(type) {
+        case 'success':
+            backgroundColor = 'linear-gradient(135deg, rgba(0, 255, 136, 0.9), rgba(0, 200, 100, 0.95))';
+            break;
+        case 'warning':
+            backgroundColor = 'linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 152, 0, 0.95))';
+            break;
+        case 'error':
+            backgroundColor = 'linear-gradient(135deg, rgba(244, 67, 54, 0.9), rgba(198, 40, 40, 0.95))';
+            break;
+        default:
+            backgroundColor = 'linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(30, 30, 30, 0.95))';
+    }
+    
+    notification.style.background = backgroundColor;
     notification.textContent = message;
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.style.transition = 'opacity 0.5s';
+        notification.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
         notification.style.opacity = '0';
-        setTimeout(() => document.body.removeChild(notification), 500);
-    }, 2000);
+        notification.style.transform = 'translate(-50%, -50%) scale(0.8)';
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 500);
+    }, 3000);
 }
 
-// Create additional UI elements for help text
+// Create enhanced help UI with better styling
 function createHelpUI() {
     const helpText = document.createElement('div');
     helpText.id = 'controlsHelp';
-    helpText.style.cssText = `
-        position: fixed;
-        bottom: 10px;
-        left: 10px;
-        color: white;
-        font-family: monospace;
-        font-size: 12px;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        opacity: 0.7;
-        pointer-events: none;
-    `;
     helpText.innerHTML = `
-        <div>Graphics: F1 (Low) | F2 (Medium) | F3 (High) | F4 (Ultra)</div>
-        <div>Movement: WASD | Space (Jump) | Shift (Sprint) | F (Fly)</div>
+        <div><strong>Graphics:</strong> F1 (Low) | F2 (Medium) | F3 (High) | F4 (Ultra)</div>
+        <div><strong>Movement:</strong> WASD | Space (Jump) | Shift (Sprint) | F (Fly)</div>
+        <div><strong>World:</strong> Explore flat plains and rare mountains!</div>
     `;
     document.body.appendChild(helpText);
     
     setTimeout(() => {
-        helpText.style.transition = 'opacity 2s';
+        helpText.style.transition = 'opacity 2s ease-out';
         helpText.style.opacity = '0';
-        setTimeout(() => helpText.remove(), 2000);
-    }, 10000);
+        setTimeout(() => {
+            if (document.body.contains(helpText)) {
+                helpText.remove();
+            }
+        }, 2000);
+    }, 12000);
 }
 
-// Handles the transition from menu to game
+// Enhanced game start with progress simulation
 async function startGame() {
     document.getElementById('mainMenu').classList.add('hidden');
     document.getElementById('loadingScreen').classList.remove('hidden');
-
-    await generateInitialWorld();
-
-    document.getElementById('loadingScreen').classList.add('hidden');
-
-    document.getElementById('ui').classList.remove('hidden');
-    document.getElementById('crosshair').classList.remove('hidden');
-    document.getElementById('blockSelector').classList.remove('hidden');
     
-    createHelpUI();
+    // Add some loading delay to show the enhanced loading screen
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    document.body.requestPointerLock();
-    gameIsRunning = true;
-    
-    showNotification('Welcome! Press F1-F4 to change graphics quality');
+    try {
+        await generateInitialWorld();
+        
+        // Small delay to show completion
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('ui').classList.remove('hidden');
+        document.getElementById('crosshair').classList.remove('hidden');
+        document.getElementById('blockSelector').classList.remove('hidden');
+        
+        createHelpUI();
+        
+        document.body.requestPointerLock();
+        gameIsRunning = true;
+        
+        showNotification('Welcome to your infinite world!', 'success');
+        
+        // Show mountain hint after a delay
+        setTimeout(() => {
+            showNotification('Rare mountains await discovery in the distance...', 'info');
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Error generating world:', error);
+        showNotification('Failed to generate world. Please try again.', 'error');
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('mainMenu').classList.remove('hidden');
+    }
 }
 
-// Entry Point
+// Entry Point with better error handling
 document.getElementById('startGameBtn').addEventListener('click', () => {
     if (typeof THREE === 'undefined') {
-        alert('Three.js library is not loaded. Please check your internet connection.');
+        showNotification('Three.js library failed to load. Check your connection.', 'error');
         return;
     }
     startGame();
