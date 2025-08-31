@@ -6,6 +6,51 @@ import { CHUNK_SIZE, WORLD_HEIGHT, RENDER_DISTANCE, BLOCKS, BLOCK_COLORS } from 
 
 export let chunks = {};
 
+// --- START: 2D Perlin Noise Generator ---
+// A self-contained, seeded Perlin noise generator for creating natural terrain.
+const perlin2D = (() => {
+    const p = new Uint8Array(512);
+    // Initialize with a random seed to make each world unique
+    let seed = Math.floor(Math.random() * 65536);
+    const random = () => {
+        var t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 256; i++) p[i + 256] = p[i];
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(t, a, b) { return a + t * (b - a); }
+    function grad(hash, x, y) {
+        const h = hash & 7;
+        const u = h < 4 ? x : y;
+        const v = h < 4 ? y : x;
+        return ((h & 1) ? -u : u) + ((h & 2) ? -2 * v : 2 * v);
+    }
+
+    return (x, y) => {
+        const X = Math.floor(x) & 255;
+        const Y = Math.floor(y) & 255;
+        x -= Math.floor(x);
+        y -= Math.floor(y);
+        const u = fade(x);
+        const v = fade(y);
+        const A = p[X] + Y, AA = p[A], AB = p[A + 1];
+        const B = p[X + 1] + Y, BA = p[B], BB = p[B + 1];
+        
+        // The result is in the range [-1, 1]
+        return lerp(v, lerp(u, grad(p[AA], x, y), grad(p[BA], x - 1, y)),
+                       lerp(u, grad(p[AB], x, y - 1), grad(p[BB], x - 1, y - 1)));
+    };
+})();
+// --- END: 2D Perlin Noise Generator ---
+
 // UPDATED: Now an async function to allow non-blocking world generation
 export async function generateInitialWorld() {
     const playerChunkX = Math.floor(player.position.x / CHUNK_SIZE);
@@ -30,28 +75,51 @@ function generateChunk(chunkX, chunkZ) {
         mesh: null, needsUpdate: true
     };
 
+    const GROUND_LEVEL = 32;
+
     for (let x = 0; x < CHUNK_SIZE; x++) {
         for (let z = 0; z < CHUNK_SIZE; z++) {
             const worldX = chunkX * CHUNK_SIZE + x;
             const worldZ = chunkZ * CHUNK_SIZE + z;
-            const height = Math.floor(32 + 15 * (Math.sin(worldX * 0.05) * Math.cos(worldZ * 0.05)));
+            
+            // --- TERRAIN GENERATION LOGIC ---
+            let mountainFactor = perlin2D(worldX * 0.003, worldZ * 0.003);
+            mountainFactor = (mountainFactor - 0.1) * 1.5;
+            mountainFactor = Math.max(0, mountainFactor);
 
+            const baseHills = perlin2D(worldX * 0.015, worldZ * 0.015) * 6;
+            const mountainDetail = perlin2D(worldX * 0.03, worldZ * 0.03) * 20;
+            
+            const mountainHeight = mountainFactor * mountainFactor * (25 + mountainDetail);
+            const totalHeight = GROUND_LEVEL + baseHills + mountainHeight;
+
+            // --- FIXED BLOCK PLACEMENT LOGIC ---
             for (let y = 0; y < WORLD_HEIGHT; y++) {
                 const index = x + z * CHUNK_SIZE + y * CHUNK_SIZE * CHUNK_SIZE;
                 
-                if (y < height - 4) {
-                    chunk.blocks[index] = BLOCKS.stone;
-                } else if (y < height) {
-                    chunk.blocks[index] = BLOCKS.dirt;
-                } else if (y === height) {
-                    if (height < 35) {
-                        chunk.blocks[index] = BLOCKS.dirt;
-                    } else {
+                const surfaceY = Math.floor(totalHeight);
+
+                // Check for the surface block FIRST to avoid being overwritten by dirt
+                if (y === surfaceY) {
+                    if (mountainHeight < 5) {
                         chunk.blocks[index] = BLOCKS.grass;
-                        if (Math.random() < 0.02) {
+                        
+                        // Tree generation - only on flat, non-mountainous areas
+                        if (mountainHeight === 0 && Math.random() < 0.008) {
                             generateTree(chunk, x, y + 1, z);
                         }
+                    } else {
+                        // Stone or cobblestone on steep mountain areas
+                        chunk.blocks[index] = Math.random() < 0.7 ? BLOCKS.stone : BLOCKS.cobblestone;
                     }
+                } 
+                // Then, check for the dirt layer below the surface
+                else if (y < surfaceY && y > surfaceY - 4) {
+                    chunk.blocks[index] = BLOCKS.dirt;
+                } 
+                // Finally, place stone for everything else below the dirt layer
+                else if (y < surfaceY - 3) {
+                    chunk.blocks[index] = BLOCKS.stone;
                 }
             }
         }
@@ -60,13 +128,33 @@ function generateChunk(chunkX, chunkZ) {
 }
 
 function generateTree(chunk, x, y, z) {
+    // Generate different tree types
+    const treeType = Math.random();
+    
+    if (treeType < 0.7) {
+        // Regular oak tree
+        generateOakTree(chunk, x, y, z);
+    } else if (treeType < 0.9) {
+        // Tall birch-like tree
+        generateTallTree(chunk, x, y, z);
+    } else {
+        // Large oak tree
+        generateLargeTree(chunk, x, y, z);
+    }
+}
+
+function generateOakTree(chunk, x, y, z) {
     const treeHeight = 4 + Math.floor(Math.random() * 3);
+    
+    // Trunk
     for (let i = 0; i < treeHeight; i++) {
         if (y + i < WORLD_HEIGHT) {
             const index = x + z * CHUNK_SIZE + (y + i) * CHUNK_SIZE * CHUNK_SIZE;
             chunk.blocks[index] = BLOCKS.logs;
         }
     }
+    
+    // Leaves
     const leafY = y + treeHeight - 1;
     for (let dx = -2; dx <= 2; dx++) {
         for (let dz = -2; dz <= 2; dz++) {
@@ -76,6 +164,70 @@ function generateTree(chunk, x, y, z) {
                 if (leafX >= 0 && leafX < CHUNK_SIZE && leafZ >= 0 && leafZ < CHUNK_SIZE && leafYPos < WORLD_HEIGHT) {
                     const index = leafX + leafZ * CHUNK_SIZE + leafYPos * CHUNK_SIZE * CHUNK_SIZE;
                     if (chunk.blocks[index] === BLOCKS.air && Math.random() < 0.8) {
+                        chunk.blocks[index] = BLOCKS.leaves;
+                    }
+                }
+            }
+        }
+    }
+}
+
+function generateTallTree(chunk, x, y, z) {
+    const treeHeight = 8 + Math.floor(Math.random() * 4);
+    
+    // Trunk
+    for (let i = 0; i < treeHeight; i++) {
+        if (y + i < WORLD_HEIGHT) {
+            const index = x + z * CHUNK_SIZE + (y + i) * CHUNK_SIZE * CHUNK_SIZE;
+            chunk.blocks[index] = BLOCKS.logs;
+        }
+    }
+    
+    // Smaller leaf crown for tall trees
+    const leafY = y + treeHeight - 2;
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+            for (let dy = 0; dy <= 3; dy++) {
+                const leafX = x + dx, leafZ = z + dz, leafYPos = leafY + dy;
+                if (leafX >= 0 && leafX < CHUNK_SIZE && leafZ >= 0 && leafZ < CHUNK_SIZE && leafYPos < WORLD_HEIGHT) {
+                    const index = leafX + leafZ * CHUNK_SIZE + leafYPos * CHUNK_SIZE * CHUNK_SIZE;
+                    if (chunk.blocks[index] === BLOCKS.air && Math.random() < 0.9) {
+                        chunk.blocks[index] = BLOCKS.leaves;
+                    }
+                }
+            }
+        }
+    }
+}
+
+function generateLargeTree(chunk, x, y, z) {
+    const treeHeight = 6 + Math.floor(Math.random() * 3);
+    
+    // Thicker trunk (2x2)
+    for (let dx = 0; dx <= 1; dx++) {
+        for (let dz = 0; dz <= 1; dz++) {
+            for (let i = 0; i < treeHeight; i++) {
+                const trunkX = x + dx, trunkZ = z + dz;
+                if (trunkX < CHUNK_SIZE && trunkZ < CHUNK_SIZE && y + i < WORLD_HEIGHT) {
+                    const index = trunkX + trunkZ * CHUNK_SIZE + (y + i) * CHUNK_SIZE * CHUNK_SIZE;
+                    chunk.blocks[index] = BLOCKS.logs;
+                }
+            }
+        }
+    }
+    
+    // Large leaf crown
+    const leafY = y + treeHeight - 2;
+    for (let dx = -3; dx <= 4; dx++) {
+        for (let dz = -3; dz <= 4; dz++) {
+            for (let dy = 0; dy <= 4; dy++) {
+                const distance = Math.sqrt(dx * dx + dz * dz + dy * dy * 0.5);
+                if (distance > 4) continue;
+                
+                const leafX = x + dx, leafZ = z + dz, leafYPos = leafY + dy;
+                if (leafX >= 0 && leafX < CHUNK_SIZE && leafZ >= 0 && leafZ < CHUNK_SIZE && leafYPos < WORLD_HEIGHT) {
+                    const index = leafX + leafZ * CHUNK_SIZE + leafYPos * CHUNK_SIZE * CHUNK_SIZE;
+                    if (chunk.blocks[index] === BLOCKS.air && Math.random() < 0.7) {
                         chunk.blocks[index] = BLOCKS.leaves;
                     }
                 }
@@ -138,14 +290,7 @@ export function getVoxelIntersection(raycaster) {
     return null;
 }
 
-// --- Additional changes for js/game/world.js ---
-// Add these modifications to your existing world.js file
-
-// In the createChunkMesh function, update the material creation to support shadows:
-// Replace this line:
-// const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-
-// With this enhanced material configuration:
+// Enhanced material configuration with better shadow support
 function createChunkMesh(chunk) {
     if (chunk.mesh) {
         scene.remove(chunk.mesh);
